@@ -1,0 +1,55 @@
+{
+  "project": {
+    "name": "xrplorer"
+  },
+  "libraries": [
+    {
+      "name": "xrplorer",
+      "links": [
+        "${PROJECT_NAME}.imports.main"
+      ]
+    }
+  ],
+  "executables": [
+    {
+      "name": "xrplorer",
+      "links": [
+        "${PROJECT_NAME}.imports.main",
+        "xrplorer.libxrplorer"
+      ]
+    }
+  ],
+  "imports": [
+    {
+      "name": "doctest",
+      "version": "2.4.8",
+      "reference": "doctest/2.4.8",
+      "file": "doctest",
+      "targets": [
+        "doctest::doctest"
+      ],
+      "groups": [
+        "test"
+      ]
+    },
+    {
+      "name": "xrpl",
+      "version": "2.2.0-rc1",
+      "reference": "xrpl/2.2.0-rc1@jfreeman/nodestore",
+      "file": null,
+      "targets": [],
+      "groups": [
+        "main"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "name": "xrplorer",
+      "links": [
+        "${PROJECT_NAME}.imports.test",
+        "xrplorer.libxrplorer"
+      ]
+    }
+  ]
+}
