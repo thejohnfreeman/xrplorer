@@ -7,7 +7,7 @@ std::filesystem::path OperatingSystem::getcwd() const {
 }
 
 void OperatingSystem::chdir(std::string_view path) {
-    cwd_ = path;
+    cwd_ /= path;
 }
 
 std::string OperatingSystem::getenv(std::string_view name) const {
