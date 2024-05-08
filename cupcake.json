@@ -21,6 +21,18 @@
   ],
   "imports": [
     {
+      "name": "argparse",
+      "version": "3.0",
+      "reference": "argparse/3.0",
+      "file": "argparse",
+      "targets": [
+        "argparse::argparse"
+      ],
+      "groups": [
+        "main"
+      ]
+    },
+    {
       "name": "doctest",
       "version": "2.4.8",
       "reference": "doctest/2.4.8",
@@ -30,6 +42,16 @@
       ],
       "groups": [
         "test"
+      ]
+    },
+    {
+      "name": "readline",
+      "version": "8.2",
+      "reference": "readline/8.2",
+      "file": null,
+      "targets": [],
+      "groups": [
+        "main"
       ]
     },
     {

@@ -11,6 +11,8 @@ cupcake_project()
 
 cupcake_find_packages(main)
 cupcake_link_libraries(${PROJECT_NAME}.imports.main INTERFACE main)
+# Conan readline package is written badly.
+target_link_libraries(${PROJECT_NAME}.imports.main INTERFACE readline::readline)
 cupcake_find_packages(tool PRIVATE)
 
 cupcake_add_libraries()
