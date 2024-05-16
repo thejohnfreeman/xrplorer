@@ -1,5 +1,5 @@
-#ifndef XRPLORER_XRPLORER_HPP
-#define XRPLORER_XRPLORER_HPP
+#ifndef XRPLORER_OPERATING_SYSTEM_HPP
+#define XRPLORER_OPERATING_SYSTEM_HPP
 
 #include <xrplorer/export.hpp>
 
@@ -14,15 +14,18 @@ class XRPLORER_EXPORT OperatingSystem {
 private:
     std::filesystem::path cwd_{"/", std::filesystem::path::generic_format};
     std::unordered_map<std::string, std::string> env_;
+    std::string hostname_;
 
 public:
     std::filesystem::path getcwd() const;
     void chdir(std::string_view path);
 
-    std::string getenv(std::string_view name) const;
+    std::string_view getenv(std::string_view name) const;
     void setenv(std::string_view name, std::string_view value);
     void unsetenv(std::string_view name);
 
+    std::string_view gethostname() const;
+    void sethostname(std::string_view hostname);
 };
 
 }
