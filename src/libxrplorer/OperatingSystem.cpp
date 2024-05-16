@@ -2,12 +2,13 @@
 
 namespace xrplorer {
 
-std::filesystem::path OperatingSystem::getcwd() const {
+std::filesystem::path const& OperatingSystem::getcwd() const {
     return cwd_;
 }
 
 void OperatingSystem::chdir(std::string_view path) {
     cwd_ /= path;
+    cwd_ = cwd_.lexically_normal();
 }
 
 std::string_view OperatingSystem::getenv(std::string_view name) const {

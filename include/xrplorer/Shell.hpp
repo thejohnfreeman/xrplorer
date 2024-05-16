@@ -20,12 +20,13 @@ public:
     int main(int argc, char** argv);
 
 private:
-    void ls(std::string_view path) {
-        auto abspath = os_.getcwd() / path;
-        std::fprintf(out_, "list contents: %s\n", abspath.c_str());
-    }
-
+    int cat(int argc, char** argv);
+    int cd(int argc, char** argv);
+    int echo(int argc, char** argv);
     int exit(int argc, char** argv);
+    int hostname(int argc, char** argv);
+    int ls(int argc, char** argv);
+    int pwd(int argc, char** argv);
 };
 
 }

@@ -17,7 +17,7 @@ private:
     std::string hostname_;
 
 public:
-    std::filesystem::path getcwd() const;
+    std::filesystem::path const& getcwd() const;
     void chdir(std::string_view path);
 
     std::string_view getenv(std::string_view name) const;
