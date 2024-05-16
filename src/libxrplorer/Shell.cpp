@@ -9,6 +9,8 @@
 
 namespace xrplorer {
 
+// TODO: Forget about copy and move.
+// TODO: Free line before each read.
 class LineReader {
 private:
     char* line_ = nullptr;
@@ -37,7 +39,10 @@ public:
 };
 
 int Shell::main(int argc, char** argv) {
-    os_.sethostname("DEFAULT_HOSTNAME");
+    // Copy the default nodestore path from the example rippled.cfg.
+    char const* hostname = (argc > 1) ? argv[1] : "/var/lib/rippled/db/nudb";
+    os_.sethostname(hostname);
+
     namespace po = boost::program_options;
     LineReader lineReader;
     while (auto line = lineReader.readline("> ")) {

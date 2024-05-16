@@ -120,7 +120,7 @@
       "version": "2.2.0-rc1",
       "reference": "xrpl/2.2.0-rc1@jfreeman/nodestore",
       "file": null,
-      "targets": [],
+      "targets": ["xrpl::xrpl"],
       "groups": [
         "main"
       ]
