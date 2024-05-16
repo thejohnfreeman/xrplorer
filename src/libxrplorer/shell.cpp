@@ -1,4 +1,4 @@
-#include <xrplorer/Shell.hpp>
+#include <xrplorer/shell.hpp>
 
 #include <boost/program_options/parsers.hpp>
 #include <readline/readline.h>

@@ -2,7 +2,7 @@
 #define XRPLORER_SHELL_HPP
 
 #include <xrplorer/export.hpp>
-#include <xrplorer/OperatingSystem.hpp>
+#include <xrplorer/operating-system.hpp>
 
 #include <cstdio>
 #include <string_view>
