@@ -24,7 +24,7 @@ void PathCommand::notExists(fs::path::iterator it) {
 
 void PathCommand::rootLayer(fs::path::iterator it) {
     if (it != path_.end()) {
-        auto name = *it;
+        auto const& name = *it;
         if (name == "nodes") {
             return nodesLayer(std::next(it));
         }
@@ -46,9 +46,9 @@ void PathCommand::rootLayer(fs::path::iterator it) {
 
 void PathCommand::nodesLayer(fs::path::iterator it) {
     if (it != path_.end()) {
-        auto name = *it;
-        // TODO: Load the named node.
+        auto const& name = *it;
         std::fprintf(os_.stdout, "digest: %s\n", name.c_str());
+        // os_.db().fetchNodeObject(name);
         return notExists(it);
     }
     if (action_ == CD) {

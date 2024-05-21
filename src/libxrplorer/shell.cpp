@@ -180,14 +180,24 @@ int Shell::hostname(int argc, char** argv) {
     return 0;
 }
 
-int Shell::ls(int argc, char** argv) {
+char const* DEFAULT_ARGV_LS[] = {"ls", "."};
+
+int Shell::ls(int argc, char** argv_) {
     assert(argv[0] == "ls"sv);
-    PathCommand cmd(os_, os_.getcwd(), PathCommand::Action::LS);
-    try {
-        cmd.execute();
-    } catch (PathCommand::Exception const& ex) {
-        std::fprintf(os_.stdout, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
-        return ex.code;
+    char const* const* argv = argv_;
+    if (argc == 1) {
+        argc = 2;
+        argv = DEFAULT_ARGV_LS;
+    }
+    for (int i = 1; i < argc; ++i) {
+        auto path = os_.getcwd() / argv[i];
+        PathCommand cmd(os_, path, PathCommand::Action::LS);
+        try {
+            cmd.execute();
+        } catch (PathCommand::Exception const& ex) {
+            std::fprintf(os_.stdout, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
+            return ex.code;
+        }
     }
     return 0;
 }

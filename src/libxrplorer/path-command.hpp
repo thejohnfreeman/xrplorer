@@ -35,7 +35,7 @@ public:
 
 public:
     PathCommand(OperatingSystem& os, fs::path path, Action action)
-        : os_(os), path_(path), action_(action)
+        : os_(os), path_(path.lexically_normal()), action_(action)
     {
     }
 
