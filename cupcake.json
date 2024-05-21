@@ -106,6 +106,18 @@
       ]
     },
     {
+      "name": "fmt",
+      "version": "10.2.1",
+      "reference": "fmt/10.2.1",
+      "file": "fmt",
+      "targets": [
+        "fmt::fmt"
+      ],
+      "groups": [
+        "main"
+      ]
+    },
+    {
       "name": "readline",
       "version": "8.2",
       "reference": "readline/8.2",
@@ -116,11 +128,25 @@
       ]
     },
     {
+      "name": "spdlog",
+      "version": "1.14.1",
+      "reference": "spdlog/1.14.1",
+      "file": "spdlog",
+      "targets": [
+        "spdlog::spdlog"
+      ],
+      "groups": [
+        "main"
+      ]
+    },
+    {
       "name": "xrpl",
       "version": "2.2.0-rc1",
       "reference": "xrpl/2.2.0-rc1@jfreeman/nodestore",
       "file": null,
-      "targets": ["xrpl::xrpl"],
+      "targets": [
+        "xrpl::xrpl"
+      ],
       "groups": [
         "main"
       ]
