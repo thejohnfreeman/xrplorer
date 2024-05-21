@@ -1,10 +1,12 @@
 #ifndef XRPLORER_OPERATING_SYSTEM_HPP
 #define XRPLORER_OPERATING_SYSTEM_HPP
 
+#include <xrplorer/database.hpp>
 #include <xrplorer/export.hpp>
 
 #include <cstdio>
 #include <filesystem>
+#include <memory>
 #include <unordered_map>
 #include <string>
 #include <string_view>
@@ -16,6 +18,7 @@ private:
     std::filesystem::path cwd_{"/", std::filesystem::path::generic_format};
     std::unordered_map<std::string, std::string> env_;
     std::string hostname_;
+    std::unique_ptr<Database> db_;
 
 public:
     FILE* stdout;
@@ -31,6 +34,9 @@ public:
 
     std::string_view gethostname() const;
     void sethostname(std::string_view hostname);
+    Database& db() const {
+        return *db_;
+    }
 };
 
 }

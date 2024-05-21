@@ -32,6 +32,7 @@ std::string_view OperatingSystem::gethostname() const {
 }
 
 void OperatingSystem::sethostname(std::string_view hostname) {
+    db_ = std::make_unique<Database>(hostname);
     hostname_ = hostname;
 }
 
