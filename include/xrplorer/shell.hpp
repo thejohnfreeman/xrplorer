@@ -12,10 +12,9 @@ namespace xrplorer {
 class XRPLORER_EXPORT Shell {
 private:
     OperatingSystem& os_;
-    std::FILE* out_;
 
 public:
-    Shell(OperatingSystem& os, std::FILE* out) : os_(os), out_(out) {}
+    Shell(OperatingSystem& os) : os_(os) {}
 
     int main(int argc, char** argv);
 

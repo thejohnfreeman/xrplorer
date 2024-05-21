@@ -3,6 +3,7 @@
 
 #include <xrplorer/export.hpp>
 
+#include <cstdio>
 #include <filesystem>
 #include <unordered_map>
 #include <string>
@@ -17,6 +18,10 @@ private:
     std::string hostname_;
 
 public:
+    FILE* stdout;
+
+    OperatingSystem(FILE* out = ::stdout) : stdout(out) {}
+
     std::filesystem::path const& getcwd() const;
     void chdir(std::string_view path);
 

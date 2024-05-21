@@ -36,7 +36,7 @@ void PathCommand::rootLayer(fs::path::iterator it) {
         return;
     }
     if (action_ == LS) {
-        std::fprintf(out_, "nodes\n");
+        std::fprintf(os_.stdout, "nodes\n");
         return;
     }
     if (action_ == CAT) {
@@ -48,6 +48,7 @@ void PathCommand::nodesLayer(fs::path::iterator it) {
     if (it != path_.end()) {
         auto name = *it;
         // TODO: Load the named node.
+        std::fprintf(os_.stdout, "digest: %s\n", name.c_str());
         return notExists(it);
     }
     if (action_ == CD) {
@@ -56,7 +57,7 @@ void PathCommand::nodesLayer(fs::path::iterator it) {
         return;
     }
     if (action_ == LS) {
-        std::fprintf(out_, "node ids...\n");
+        std::fprintf(os_.stdout, "node ids...\n");
         return;
     }
     if (action_ == CAT) {

@@ -4,7 +4,6 @@
 #include <xrplorer/operating-system.hpp>
 
 #include <cassert>
-#include <cstdio>
 #include <filesystem>
 #include <iterator>
 #include <string>
@@ -31,13 +30,12 @@ public:
     };
 
     OperatingSystem& os_;
-    std::FILE* out_;
     fs::path path_;
     Action action_;
 
 public:
-    PathCommand(OperatingSystem& os, std::FILE* out, fs::path path, Action action)
-        : os_(os), out_(out), path_(path), action_(action)
+    PathCommand(OperatingSystem& os, fs::path path, Action action)
+        : os_(os), path_(path), action_(action)
     {
     }
 

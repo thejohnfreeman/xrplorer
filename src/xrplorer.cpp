@@ -7,6 +7,6 @@
 
 int main(int argc, char** argv) {
     xrplorer::OperatingSystem os;
-    xrplorer::Shell shell{os, stdout};
+    xrplorer::Shell shell{os};
     return shell.main(argc, argv);
 }

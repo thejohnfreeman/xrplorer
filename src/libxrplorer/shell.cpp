@@ -95,7 +95,7 @@ int Shell::main(int argc, char** argv) {
             this->ls(argc, argv);
             continue;
         }
-        std::fprintf(out_, "%s: command not found\n", argv[0]);
+        std::fprintf(os_.stdout, "%s: command not found\n", argv[0]);
     }
     return 0;
 }
@@ -104,11 +104,11 @@ int Shell::cat(int argc, char** argv) {
     assert(argv[0] == "cat"sv);
     for (int i = 1; i < argc; ++i) {
         auto path = os_.getcwd() / argv[i];
-        PathCommand cmd(os_, out_, path, PathCommand::Action::CAT);
+        PathCommand cmd(os_, path, PathCommand::Action::CAT);
         try {
             cmd.execute();
         } catch (PathCommand::Exception const& ex) {
-            std::fprintf(out_, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
+            std::fprintf(os_.stdout, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
             return ex.code;
         }
     }
@@ -119,11 +119,11 @@ int Shell::cd(int argc, char** argv) {
     assert(argv[0] == "cd"sv);
     char const* suffix = (argc > 1) ? argv[1] : "/";
     auto path = os_.getcwd() / suffix;
-    PathCommand cmd(os_, out_, path, PathCommand::Action::CD);
+    PathCommand cmd(os_, path, PathCommand::Action::CD);
     try {
         cmd.execute();
     } catch (PathCommand::Exception const& ex) {
-        std::fprintf(out_, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
+        std::fprintf(os_.stdout, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
         return ex.code;
     }
     return 0;
@@ -133,11 +133,11 @@ int Shell::echo(int argc, char** argv) {
     assert(argv[0] == "echo"sv);
     for (auto i = 1; i < argc; ++i) {
         if (i > 1) {
-            std::fputc(' ', out_);
+            std::fputc(' ', os_.stdout);
         }
-        std::fputs(argv[i], out_);
+        std::fputs(argv[i], os_.stdout);
     }
-    std::fputs("\n", out_);
+    std::fputs("\n", os_.stdout);
     return 0;
 }
 
@@ -150,43 +150,43 @@ int Shell::exit(int argc, char** argv) {
         try {
             return std::stoi(argv[1]);
         } catch (...) {
-            std::fprintf(out_, "%s: %s: numeric argument required", argv[0], argv[1]);
+            std::fprintf(os_.stdout, "%s: %s: numeric argument required", argv[0], argv[1]);
             return 2;
         }
     }
-    std::fprintf(out_, "%s: too many arguments", argv[0]);
+    std::fprintf(os_.stdout, "%s: too many arguments", argv[0]);
     return 1;
 }
 
 int Shell::help(int argc, char** argv) {
-    std::fprintf(out_, "cat [file]\n");
-    std::fprintf(out_, "cd [dir]\n");
-    std::fprintf(out_, "echo [arg ...]\n");
-    std::fprintf(out_, "exit [n]\n");
-    std::fprintf(out_, "help\n");
-    std::fprintf(out_, "hostname [name]\n");
-    std::fprintf(out_, "ls [dir]\n");
-    std::fprintf(out_, "pwd\n");
+    std::fprintf(os_.stdout, "cat [file]\n");
+    std::fprintf(os_.stdout, "cd [dir]\n");
+    std::fprintf(os_.stdout, "echo [arg ...]\n");
+    std::fprintf(os_.stdout, "exit [n]\n");
+    std::fprintf(os_.stdout, "help\n");
+    std::fprintf(os_.stdout, "hostname [name]\n");
+    std::fprintf(os_.stdout, "ls [dir]\n");
+    std::fprintf(os_.stdout, "pwd\n");
     return 0;
 }
 
 int Shell::hostname(int argc, char** argv) {
     assert(argv[0] == "hostname"sv);
     if (argc > 1) {
-        std::fprintf(out_, "%s: changing hostname not yet implemented\n", argv[0]);
+        std::fprintf(os_.stdout, "%s: changing hostname not yet implemented\n", argv[0]);
     }
     auto sv = os_.gethostname();
-    std::fprintf(out_, "%.*s\n", static_cast<int>(sv.length()), sv.data());
+    std::fprintf(os_.stdout, "%.*s\n", static_cast<int>(sv.length()), sv.data());
     return 0;
 }
 
 int Shell::ls(int argc, char** argv) {
     assert(argv[0] == "ls"sv);
-    PathCommand cmd(os_, out_, os_.getcwd(), PathCommand::Action::LS);
+    PathCommand cmd(os_, os_.getcwd(), PathCommand::Action::LS);
     try {
         cmd.execute();
     } catch (PathCommand::Exception const& ex) {
-        std::fprintf(out_, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
+        std::fprintf(os_.stdout, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
         return ex.code;
     }
     return 0;
@@ -195,7 +195,7 @@ int Shell::ls(int argc, char** argv) {
 int Shell::pwd(int argc, char** argv) {
     assert(argv[0] == "pwd"sv);
     auto const& path = os_.getcwd();
-    std::fprintf(out_, "%s\n", path.c_str());
+    std::fprintf(os_.stdout, "%s\n", path.c_str());
     return 0;
 }
 
