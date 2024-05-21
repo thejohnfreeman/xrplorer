@@ -3,6 +3,8 @@
 
 #include <xrplorer/operating-system.hpp>
 
+#include <xrpl/nodestore/NodeObject.h>
+
 #include <cassert>
 #include <filesystem>
 #include <iterator>
@@ -51,6 +53,7 @@ private:
     void notExists();
     void rootLayer();
     void nodesLayer();
+    void headerLayer(ripple::NodeObject& object);
 };
 
 }

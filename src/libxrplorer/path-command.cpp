@@ -1,6 +1,7 @@
 #include <src/libxrplorer/path-command.hpp>
 
 #include <xrpl/basics/base_uint.h>
+#include <xrpl/protocol/Serializer.h>
 
 #include <functional>
 #include <iterator>
@@ -37,9 +38,8 @@ void PathCommand::notExists() {
 
 void PathCommand::rootLayer() {
     if (it_ != path_.end()) {
-        auto const& name = *it_;
+        auto const& name = *it_++;
         if (name == "nodes") {
-            ++it_;
             return nodesLayer();
         }
         return notExists();
@@ -60,7 +60,7 @@ void PathCommand::rootLayer() {
 
 void PathCommand::nodesLayer() {
     if (it_ != path_.end()) {
-        auto const& name = *it_;
+        auto const& name = *it_++;
         ripple::uint256 digest;
         if (!digest.parseHex(name)) {
             return throw_(NOT_A_DIGEST, "not a digest");
@@ -69,7 +69,9 @@ void PathCommand::nodesLayer() {
         if (!object) {
             return notExists();
         }
-        std::fprintf(os_.stdout, "%d\n", object->getType());
+        switch (object->getType()) {
+            case ripple::hotLEDGER: return headerLayer(*object);
+        }
         return;
     }
     if (action_ == CD) {
@@ -85,5 +87,36 @@ void PathCommand::nodesLayer() {
         return notFile();
     }
 }
+
+void PathCommand::headerLayer(ripple::NodeObject& object) {
+    if (it_ != path_.end()) {
+        auto const& name = *it_++;
+        std::fprintf(os_.stdout, "header field: %s\n", name.c_str());
+        return;
+    }
+    if (action_ == CD) {
+        os_.chdir(path_.native());
+        os_.setenv("PWD", path_.native());
+        return;
+    }
+    if (action_ == LS) {
+        auto const& slice = object.getData();
+        ripple::SerialIter sit(slice.data(), slice.size());
+        auto sequence = sit.get32();
+        sit.skip(8);
+        auto parentDigest = ripple::to_string(sit.get256());
+        auto txnsDigest = ripple::to_string(sit.get256());
+        auto stateDigest = ripple::to_string(sit.get256());
+        std::fprintf(os_.stdout, "sequence\n");
+        std::fprintf(os_.stdout, "parent -> /nodes/%s\n", parentDigest.c_str());
+        std::fprintf(os_.stdout, "txns -> /nodes/%s\n", txnsDigest.c_str());
+        std::fprintf(os_.stdout, "state -> /nodes/%s\n", stateDigest.c_str());
+        return;
+    }
+    if (action_ == CAT) {
+        return notFile();
+    }
+}
+
 
 }
