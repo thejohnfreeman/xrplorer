@@ -1,5 +1,7 @@
 #include <xrplorer/shell.hpp>
 
+#include <src/libxrplorer/path-command.hpp>
+
 #include <boost/program_options/parsers.hpp>
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -100,16 +102,30 @@ int Shell::main(int argc, char** argv) {
 
 int Shell::cat(int argc, char** argv) {
     assert(argv[0] == "cat"sv);
-    std::fprintf(out_, "%s: uuhhh\n", argv[0]);
+    for (int i = 1; i < argc; ++i) {
+        auto path = os_.getcwd() / argv[i];
+        PathCommand cmd(os_, out_, path, PathCommand::Action::CAT);
+        try {
+            cmd.execute();
+        } catch (PathCommand::Exception const& ex) {
+            std::fprintf(out_, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
+            return ex.code;
+        }
+    }
     return 0;
 }
 
 int Shell::cd(int argc, char** argv) {
     assert(argv[0] == "cd"sv);
-    char const* path = (argc > 1) ? argv[1] : "/";
-    // TODO: Check that path is legal.
-    os_.chdir(path);
-    os_.setenv("PWD", path);
+    char const* suffix = (argc > 1) ? argv[1] : "/";
+    auto path = os_.getcwd() / suffix;
+    PathCommand cmd(os_, out_, path, PathCommand::Action::CD);
+    try {
+        cmd.execute();
+    } catch (PathCommand::Exception const& ex) {
+        std::fprintf(out_, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
+        return ex.code;
+    }
     return 0;
 }
 
@@ -166,7 +182,13 @@ int Shell::hostname(int argc, char** argv) {
 
 int Shell::ls(int argc, char** argv) {
     assert(argv[0] == "ls"sv);
-    std::fprintf(out_, "%s: uhhhh\n", argv[0]);
+    PathCommand cmd(os_, out_, os_.getcwd(), PathCommand::Action::LS);
+    try {
+        cmd.execute();
+    } catch (PathCommand::Exception const& ex) {
+        std::fprintf(out_, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
+        return ex.code;
+    }
     return 0;
 }
 
