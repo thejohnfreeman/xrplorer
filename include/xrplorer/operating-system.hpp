@@ -2,8 +2,6 @@
 #define XRPLORER_OPERATING_SYSTEM_HPP
 
 #include <xrplorer/export.hpp>
-#include <xrplorer/directory.hpp>
-#include <xrplorer/root-directory.hpp>
 
 #include <filesystem>
 #include <unordered_map>
@@ -17,7 +15,6 @@ private:
     std::filesystem::path cwd_{"/", std::filesystem::path::generic_format};
     std::unordered_map<std::string, std::string> env_;
     std::string hostname_;
-    std::unique_ptr<RootDirectory> root_;
 
 public:
     std::filesystem::path const& getcwd() const;
@@ -29,8 +26,6 @@ public:
 
     std::string_view gethostname() const;
     void sethostname(std::string_view hostname);
-
-    std::unique_ptr<Directory> opendir(std::filesystem::path const& path);
 };
 
 }

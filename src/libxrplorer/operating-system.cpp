@@ -32,13 +32,7 @@ std::string_view OperatingSystem::gethostname() const {
 }
 
 void OperatingSystem::sethostname(std::string_view hostname) {
-    root_ = std::make_unique<RootDirectory>(hostname);
     hostname_ = hostname;
-}
-
-std::unique_ptr<Directory>
-OperatingSystem::opendir(std::filesystem::path const& path) {
-    return {};
 }
 
 }
