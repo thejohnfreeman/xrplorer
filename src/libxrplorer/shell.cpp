@@ -81,6 +81,10 @@ int Shell::main(int argc, char** argv) {
             this->cat(argc, argv);
             continue;
         }
+        if (command == "help") {
+            this->help(argc, argv);
+            continue;
+        }
         if (command == "hostname") {
             this->hostname(argc, argv);
             continue;
@@ -136,6 +140,18 @@ int Shell::exit(int argc, char** argv) {
     }
     std::fprintf(out_, "%s: too many arguments", argv[0]);
     return 1;
+}
+
+int Shell::help(int argc, char** argv) {
+    std::fprintf(out_, "cat [file]\n");
+    std::fprintf(out_, "cd [dir]\n");
+    std::fprintf(out_, "echo [arg ...]\n");
+    std::fprintf(out_, "exit [n]\n");
+    std::fprintf(out_, "help\n");
+    std::fprintf(out_, "hostname [name]\n");
+    std::fprintf(out_, "ls [dir]\n");
+    std::fprintf(out_, "pwd\n");
+    return 0;
 }
 
 int Shell::hostname(int argc, char** argv) {

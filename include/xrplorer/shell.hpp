@@ -24,6 +24,7 @@ private:
     int cd(int argc, char** argv);
     int echo(int argc, char** argv);
     int exit(int argc, char** argv);
+    int help(int argc, char** argv);
     int hostname(int argc, char** argv);
     int ls(int argc, char** argv);
     int pwd(int argc, char** argv);
