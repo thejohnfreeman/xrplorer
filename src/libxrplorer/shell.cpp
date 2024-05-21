@@ -104,9 +104,8 @@ int Shell::cat(int argc, char** argv) {
     assert(argv[0] == "cat"sv);
     for (int i = 1; i < argc; ++i) {
         auto path = os_.getcwd() / argv[i];
-        PathCommand cmd(os_, path, PathCommand::Action::CAT);
         try {
-            cmd.execute();
+            PathCommand cmd(os_, path, PathCommand::Action::CAT);
         } catch (PathCommand::Exception const& ex) {
             std::fprintf(os_.stdout, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
             return ex.code;
@@ -119,9 +118,8 @@ int Shell::cd(int argc, char** argv) {
     assert(argv[0] == "cd"sv);
     char const* suffix = (argc > 1) ? argv[1] : "/";
     auto path = os_.getcwd() / suffix;
-    PathCommand cmd(os_, path, PathCommand::Action::CD);
     try {
-        cmd.execute();
+        PathCommand cmd(os_, path, PathCommand::Action::CD);
     } catch (PathCommand::Exception const& ex) {
         std::fprintf(os_.stdout, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
         return ex.code;
@@ -191,9 +189,8 @@ int Shell::ls(int argc, char** argv_) {
     }
     for (int i = 1; i < argc; ++i) {
         auto path = os_.getcwd() / argv[i];
-        PathCommand cmd(os_, path, PathCommand::Action::LS);
         try {
-            cmd.execute();
+            PathCommand cmd(os_, path, PathCommand::Action::LS);
         } catch (PathCommand::Exception const& ex) {
             std::fprintf(os_.stdout, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
             return ex.code;

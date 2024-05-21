@@ -1,5 +1,7 @@
 #include <src/libxrplorer/path-command.hpp>
 
+#include <xrpl/basics/base_uint.h>
+
 #include <functional>
 #include <iterator>
 #include <numeric>
@@ -10,25 +12,37 @@ fs::path make_path(fs::path::iterator begin, fs::path::iterator end) {
     return std::accumulate(begin, end, fs::path{}, std::divides{});
 }
 
-void PathCommand::notFile(fs::path::iterator it) {
-    throw Exception{1, path_, "not a file"};
+enum ErrorCode {
+    DOES_NOT_EXIST,
+    NOT_A_FILE,
+    NOT_A_DIRECTORY,
+    NOT_A_DIGEST,
+};
+
+void PathCommand::throw_(int code, std::string_view message) {
+    throw Exception{code, make_path(path_.begin(), std::next(it_)), std::string{message}};
 }
 
-void PathCommand::notDirectory(fs::path::iterator it) {
-    throw Exception{2, make_path(path_.begin(), std::next(it)), "not a directory"};
+void PathCommand::notFile() {
+    return throw_(NOT_A_FILE, "not a file");
 }
 
-void PathCommand::notExists(fs::path::iterator it) {
-    throw Exception{3, make_path(path_.begin(), std::next(it)), "no such file or directory"};
+void PathCommand::notDirectory() {
+    return throw_(NOT_A_DIRECTORY, "not a directory");
 }
 
-void PathCommand::rootLayer(fs::path::iterator it) {
-    if (it != path_.end()) {
-        auto const& name = *it;
+void PathCommand::notExists() {
+    return throw_(DOES_NOT_EXIST, "no such file or directory");
+}
+
+void PathCommand::rootLayer() {
+    if (it_ != path_.end()) {
+        auto const& name = *it_;
         if (name == "nodes") {
-            return nodesLayer(std::next(it));
+            ++it_;
+            return nodesLayer();
         }
-        return notExists(it);
+        return notExists();
     }
     if (action_ == CD) {
         os_.chdir(path_.native());
@@ -40,16 +54,23 @@ void PathCommand::rootLayer(fs::path::iterator it) {
         return;
     }
     if (action_ == CAT) {
-        return notFile(it);
+        return notFile();
     }
 }
 
-void PathCommand::nodesLayer(fs::path::iterator it) {
-    if (it != path_.end()) {
-        auto const& name = *it;
-        std::fprintf(os_.stdout, "digest: %s\n", name.c_str());
-        // os_.db().fetchNodeObject(name);
-        return notExists(it);
+void PathCommand::nodesLayer() {
+    if (it_ != path_.end()) {
+        auto const& name = *it_;
+        ripple::uint256 digest;
+        if (!digest.parseHex(name)) {
+            return throw_(NOT_A_DIGEST, "not a digest");
+        }
+        auto object = os_.db()->fetchNodeObject(digest);
+        if (!object) {
+            return notExists();
+        }
+        std::fprintf(os_.stdout, "%d\n", object->getType());
+        return;
     }
     if (action_ == CD) {
         os_.chdir(path_.native());
@@ -61,7 +82,7 @@ void PathCommand::nodesLayer(fs::path::iterator it) {
         return;
     }
     if (action_ == CAT) {
-        return notFile(it);
+        return notFile();
     }
 }
 

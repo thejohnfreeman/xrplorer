@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <iterator>
 #include <string>
+#include <string_view>
 
 namespace xrplorer {
 
@@ -31,26 +32,25 @@ public:
 
     OperatingSystem& os_;
     fs::path path_;
+    fs::path::iterator it_;
     Action action_;
 
 public:
     PathCommand(OperatingSystem& os, fs::path path, Action action)
-        : os_(os), path_(path.lexically_normal()), action_(action)
+        : os_(os), path_(path.lexically_normal()), it_(path_.begin()), action_(action)
     {
-    }
-
-    void execute() {
-        auto it = path_.begin();
-        assert(*it == "/");
-        rootLayer(std::next(it));
+        assert(*it_ == "/");
+        ++it_;
+        rootLayer();
     }
 
 private:
-    void notFile(fs::path::iterator it);
-    void notDirectory(fs::path::iterator it);
-    void notExists(fs::path::iterator it);
-    void rootLayer(fs::path::iterator it);
-    void nodesLayer(fs::path::iterator it);
+    void throw_(int code, std::string_view message);
+    void notFile();
+    void notDirectory();
+    void notExists();
+    void rootLayer();
+    void nodesLayer();
 };
 
 }
