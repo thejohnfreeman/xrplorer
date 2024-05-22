@@ -34,9 +34,14 @@ public:
     }
 
     char const* readline(char const* prompt) {
-        line_ = ::readline(prompt);
-        if (line_ && *line_ && *line_ != ' ') {
-            ::add_history(line_);
+        while (true) {
+            line_ = ::readline(prompt);
+            if (!line_) break;
+            if (*line_ == 0 || *line_ == '#') continue;
+            if (*line_ != ' ') {
+                ::add_history(line_);
+            }
+            break;
         }
         return line_;
     }
