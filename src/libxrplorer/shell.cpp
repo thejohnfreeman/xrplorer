@@ -13,37 +13,31 @@
 
 namespace xrplorer {
 
-// TODO: Forget about copy and move.
-// TODO: Free line before each read.
 class LineReader {
 private:
-    char* line_ = nullptr;
+    std::unique_ptr<char> line_{nullptr};
 
 public:
     LineReader() {}
     LineReader(LineReader const&) = delete;
-    LineReader(LineReader&& rhs) : line_(rhs.line_) { rhs.line_ = nullptr; }
+    LineReader(LineReader&& rhs) : line_(std::move(rhs.line_)) {}
     LineReader& operator= (LineReader const&) = delete;
     LineReader& operator= (LineReader&& rhs) {
-        line_ = rhs.line_;
-        rhs.line_ = nullptr;
+        line_ = std::move(rhs.line_);
         return *this;
-    }
-    ~LineReader() {
-        std::free(line_);
     }
 
     char const* readline(char const* prompt) {
         while (true) {
-            line_ = ::readline(prompt);
+            line_.reset(::readline(prompt));
             if (!line_) break;
             if (*line_ == 0 || *line_ == '#') continue;
             if (*line_ != ' ') {
-                ::add_history(line_);
+                ::add_history(line_.get());
             }
             break;
         }
-        return line_;
+        return line_.get();
     }
 };
 
