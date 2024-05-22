@@ -3,19 +3,39 @@
 #include <fmt/core.h>
 #include <fmt/std.h>
 #include <xrpl/protocol/LedgerHeader.h>
+#include <xrpl/beast/utility/Zero.h>
 
 #include <functional>
 #include <iterator>
 #include <numeric>
+#include <utility>
 
 namespace ripple {
 template <std::size_t Bits, class Tag>
 auto format_as(base_uint<Bits, Tag> const& uint) {
     return to_string(uint);
 }
+auto format_as(NodeObjectType const& type) {
+    return to_string(type);
+}
+auto format_as(HashPrefix prefix) {
+    // Prefix is 3 ASCII characters packed into a std::uint32_t.
+    // TODO: Can we get down to one string allocation?
+    std::uint32_t i = static_cast<std::underlying_type_t<HashPrefix>>(prefix);
+    char a = (i >> 24) & 0xFF;
+    char b = (i >> 16) & 0xFF;
+    char c = (i >>  8) & 0xFF;
+    return fmt::format("0x{:X} ({}{}{})", i, a, b, c);
+}
 }
 
 namespace xrplorer {
+
+ripple::HashPrefix deserializePrefix(ripple::Slice const& slice) {
+    ripple::SerialIter sit{slice.data(), slice.size()};
+    auto prefix = ripple::safe_cast<ripple::HashPrefix>(sit.get32());
+    return prefix;
+}
 
 fs::path make_path(fs::path::iterator begin, fs::path::iterator end) {
     return std::accumulate(begin, end, fs::path{}, std::divides{});
@@ -23,6 +43,7 @@ fs::path make_path(fs::path::iterator begin, fs::path::iterator end) {
 
 // TODO: Pair these with their message strings.
 enum ErrorCode {
+    NOT_IMPLEMENTED,
     // Path is not an entry in its parent directory.
     DOES_NOT_EXIST,
     NOT_A_FILE,
@@ -34,7 +55,8 @@ enum ErrorCode {
 };
 
 void PathCommand::throw_(int code, std::string_view message) {
-    throw Exception{code, make_path(path_.begin(), std::next(it_)), std::string{message}};
+    auto const& path = make_path(path_.begin(), it_);
+    throw Exception{code, path, std::string{message}};
 }
 
 void PathCommand::notFile() {
@@ -63,8 +85,8 @@ void PathCommand::rootDirectory() {
         return notExists();
     }
     if (action_ == CD) {
-        os_.chdir(path_.native());
-        os_.setenv("PWD", path_.native());
+        os_.chdir(path_.generic_string());
+        os_.setenv("PWD", path_.generic_string());
         return;
     }
     if (action_ == LS) {
@@ -87,8 +109,8 @@ void PathCommand::nodesDirectory() {
         return nodeBranch(digest);
     }
     if (action_ == CD) {
-        os_.chdir(path_.native());
-        os_.setenv("PWD", path_.native());
+        os_.chdir(path_.generic_string());
+        os_.setenv("PWD", path_.generic_string());
         return;
     }
     if (action_ == LS) {
@@ -105,9 +127,13 @@ void PathCommand::nodeBranch(ripple::uint256 const& digest) {
     if (!object) {
         return throw_(OBJECT_MISSING, "object missing");
     }
-    switch (object->getType()) {
-        case ripple::hotLEDGER: return headerDirectory(*object);
+    auto const& slice = ripple::makeSlice(object->getData());
+    auto prefix = deserializePrefix(slice);
+    switch (prefix) {
+        case ripple::HashPrefix::ledgerMaster: return headerDirectory(*object);
+        case ripple::HashPrefix::innerNode: return innerDirectory(*object);
     }
+    spdlog::error("type unknown: {}", prefix);
     return throw_(TYPE_UNKNOWN, "type unknown");
 }
 
@@ -133,8 +159,8 @@ void PathCommand::headerDirectory(ripple::NodeObject const& object) {
         return notExists();
     }
     if (action_ == CD) {
-        os_.chdir(path_.native());
-        os_.setenv("PWD", path_.native());
+        os_.chdir(path_.generic_string());
+        os_.setenv("PWD", path_.generic_string());
         return;
     }
     if (action_ == LS) {
@@ -149,9 +175,59 @@ void PathCommand::headerDirectory(ripple::NodeObject const& object) {
     }
 }
 
+
+void PathCommand::innerDirectory(ripple::NodeObject const& object) {
+    skipEmpty();
+    auto const& slice = ripple::makeSlice(object.getData());
+    ripple::SerialIter sit(slice.data(), slice.size());
+    // Consume the prefix.
+    sit.get32();
+    // libxrpl does not have a deserialized representation of inner nodes.
+    // An inner node is a directory with a subdirectory for each non-null child.
+    if (it_ != path_.end()) {
+        auto name = (it_++)->generic_string();
+        // `name` must be one hexadecimal character from 0 to F.
+        if (name.length() != 1) {
+            return notExists();
+        }
+        char const c = name[0];
+        int index;
+        if (c >= '0' && c <= '9') {
+            index = c - '0';
+        } else if (c >= 'A' && c <= 'F') {
+            index = 10 + c - 'A';
+        } else {
+            return notExists();
+        }
+        sit.skip((256 / 8) * index);
+        auto childDigest = sit.get256();
+        return nodeBranch(childDigest);
+    }
+    if (action_ == CD) {
+        os_.chdir(path_.generic_string());
+        os_.setenv("PWD", path_.generic_string());
+        return;
+    }
+    if (action_ == LS) {
+        // TODO: Is this constant exported by libxrpl?
+        // SHAMapInnerNode::branchFactor is not exported.
+        constexpr auto branchFactor = 16;
+        for (auto i = 0; i < branchFactor; ++i) {
+            auto childDigest = sit.get256();
+            if (childDigest == beast::zero)
+            {
+                continue;
+            }
+            fmt::print(os_.stdout, "{:X}\n", i);
+        }
+    }
+
+}
+
 template <typename T>
 void PathCommand::valueFile(T const& value) {
     if (it_ != path_.end()) {
+        ++it_;
         return notDirectory();
     }
     if (action_ == CD) {

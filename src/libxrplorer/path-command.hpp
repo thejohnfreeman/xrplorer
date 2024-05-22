@@ -64,6 +64,7 @@ private:
     void nodesDirectory();
     void nodeBranch(ripple::uint256 const& digest);
     void headerDirectory(ripple::NodeObject const& object);
+    void innerDirectory(ripple::NodeObject const& object);
     template <typename T>
     void valueFile(T const& value);
 };
