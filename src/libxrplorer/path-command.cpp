@@ -71,6 +71,10 @@ void PathCommand::notExists() {
     return throw_(DOES_NOT_EXIST, "no such file or directory");
 }
 
+void PathCommand::notImplemented() {
+    return throw_(NOT_IMPLEMENTED, "not implemented");
+}
+
 void PathCommand::skipEmpty() {
     for (; it_ != path_.end() && (*it_ == "" || *it_ == "."); ++it_);
 }
@@ -131,6 +135,7 @@ void PathCommand::nodeBranch(ripple::uint256 const& digest) {
     auto prefix = deserializePrefix(slice);
     switch (prefix) {
         case ripple::HashPrefix::ledgerMaster: return headerDirectory(*object);
+        case ripple::HashPrefix::txNode: return sndDirectory(*object);
         case ripple::HashPrefix::innerNode: return innerDirectory(*object);
     }
     spdlog::error("type unknown: {}", prefix);
@@ -154,7 +159,7 @@ void PathCommand::headerDirectory(ripple::NodeObject const& object) {
             return nodeBranch(header.txHash);
         }
         if (name == "state") {
-            return nodeBranch(header.accountHash);
+            return stateDirectory(header.accountHash);
         }
         return notExists();
     }
@@ -175,6 +180,29 @@ void PathCommand::headerDirectory(ripple::NodeObject const& object) {
     }
 }
 
+void PathCommand::stateDirectory(ripple::uint256 const& digest) {
+    skipEmpty();
+    if (it_ != path_.end()) {
+        auto const& name = *it_++;
+        if (name == "root") {
+            return nodeBranch(digest);
+        }
+        return notImplemented();
+    }
+    if (action_ == CD) {
+        os_.chdir(path_.generic_string());
+        os_.setenv("PWD", path_.generic_string());
+        return;
+    }
+    if (action_ == LS) {
+        fmt::print(os_.stdout, "accounts\n");
+        fmt::print(os_.stdout, "root -> /nodes/{}\n", digest);
+        return;
+    }
+    if (action_ == CAT) {
+        return notFile();
+    }
+}
 
 void PathCommand::innerDirectory(ripple::NodeObject const& object) {
     skipEmpty();
@@ -220,8 +248,17 @@ void PathCommand::innerDirectory(ripple::NodeObject const& object) {
             }
             fmt::print(os_.stdout, "{:X}\n", i);
         }
+        return;
     }
+    if (action_ == CAT) {
+        // TODO: Should we add a file named "blob"?
+        return notFile();
+    }
+}
 
+void PathCommand::sndDirectory(ripple::NodeObject const& object) {
+    skipEmpty();
+    return notImplemented();
 }
 
 template <typename T>

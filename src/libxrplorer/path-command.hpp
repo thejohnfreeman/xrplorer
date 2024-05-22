@@ -59,12 +59,16 @@ private:
     void notFile();
     void notDirectory();
     void notExists();
+    void notImplemented();
     void skipEmpty();
     void rootDirectory();
     void nodesDirectory();
     void nodeBranch(ripple::uint256 const& digest);
     void headerDirectory(ripple::NodeObject const& object);
+    void stateDirectory(ripple::uint256 const& digest);
     void innerDirectory(ripple::NodeObject const& object);
+    // A transaction with metadata.
+    void sndDirectory(ripple::NodeObject const& object);
     template <typename T>
     void valueFile(T const& value);
 };
