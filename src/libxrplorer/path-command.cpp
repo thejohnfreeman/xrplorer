@@ -3,6 +3,9 @@
 #include <xrpl/basics/base_uint.h>
 #include <xrpl/protocol/Serializer.h>
 
+#include <fmt/core.h>
+#include <fmt/std.h>
+
 #include <functional>
 #include <iterator>
 #include <numeric>
@@ -50,7 +53,7 @@ void PathCommand::rootLayer() {
         return;
     }
     if (action_ == LS) {
-        std::fprintf(os_.stdout, "nodes\n");
+        fmt::print(os_.stdout, "nodes\n");
         return;
     }
     if (action_ == CAT) {
@@ -80,7 +83,7 @@ void PathCommand::nodesLayer() {
         return;
     }
     if (action_ == LS) {
-        std::fprintf(os_.stdout, "node ids...\n");
+        fmt::print(os_.stdout, "node ids...\n");
         return;
     }
     if (action_ == CAT) {
@@ -91,7 +94,7 @@ void PathCommand::nodesLayer() {
 void PathCommand::headerLayer(ripple::NodeObject& object) {
     if (it_ != path_.end()) {
         auto const& name = *it_++;
-        std::fprintf(os_.stdout, "header field: %s\n", name.c_str());
+        fmt::print(os_.stdout, "header field: {}\n", name);
         return;
     }
     if (action_ == CD) {
@@ -107,10 +110,10 @@ void PathCommand::headerLayer(ripple::NodeObject& object) {
         auto parentDigest = ripple::to_string(sit.get256());
         auto txnsDigest = ripple::to_string(sit.get256());
         auto stateDigest = ripple::to_string(sit.get256());
-        std::fprintf(os_.stdout, "sequence\n");
-        std::fprintf(os_.stdout, "parent -> /nodes/%s\n", parentDigest.c_str());
-        std::fprintf(os_.stdout, "txns -> /nodes/%s\n", txnsDigest.c_str());
-        std::fprintf(os_.stdout, "state -> /nodes/%s\n", stateDigest.c_str());
+        fmt::print(os_.stdout, "sequence\n");
+        fmt::print(os_.stdout, "parent -> /nodes/{}\n", parentDigest);
+        fmt::print(os_.stdout, "txns -> /nodes/{}\n", txnsDigest);
+        fmt::print(os_.stdout, "state -> /nodes/{}\n", stateDigest);
         return;
     }
     if (action_ == CAT) {

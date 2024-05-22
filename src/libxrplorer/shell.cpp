@@ -3,6 +3,8 @@
 #include <src/libxrplorer/path-command.hpp>
 
 #include <boost/program_options/parsers.hpp>
+#include <fmt/core.h>
+#include <fmt/std.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -95,7 +97,7 @@ int Shell::main(int argc, char** argv) {
             this->ls(argc, argv);
             continue;
         }
-        std::fprintf(os_.stdout, "%s: command not found\n", argv[0]);
+        fmt::print(os_.stdout, "{}: command not found\n", argv[0]);
     }
     return 0;
 }
@@ -107,7 +109,7 @@ int Shell::cat(int argc, char** argv) {
         try {
             PathCommand cmd(os_, path, PathCommand::Action::CAT);
         } catch (PathCommand::Exception const& ex) {
-            std::fprintf(os_.stdout, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
+            fmt::print(os_.stdout, "{}: {}: {}\n", argv[0], ex.path, ex.message);
             return ex.code;
         }
     }
@@ -121,7 +123,7 @@ int Shell::cd(int argc, char** argv) {
     try {
         PathCommand cmd(os_, path, PathCommand::Action::CD);
     } catch (PathCommand::Exception const& ex) {
-        std::fprintf(os_.stdout, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
+        fmt::print(os_.stdout, "{}: {}: {}\n", argv[0], ex.path, ex.message);
         return ex.code;
     }
     return 0;
@@ -148,33 +150,33 @@ int Shell::exit(int argc, char** argv) {
         try {
             return std::stoi(argv[1]);
         } catch (...) {
-            std::fprintf(os_.stdout, "%s: %s: numeric argument required", argv[0], argv[1]);
+            fmt::print(os_.stdout, "{}: {}: numeric argument required", argv[0], argv[1]);
             return 2;
         }
     }
-    std::fprintf(os_.stdout, "%s: too many arguments", argv[0]);
+    fmt::print(os_.stdout, "{}: too many arguments", argv[0]);
     return 1;
 }
 
 int Shell::help(int argc, char** argv) {
-    std::fprintf(os_.stdout, "cat [file]\n");
-    std::fprintf(os_.stdout, "cd [dir]\n");
-    std::fprintf(os_.stdout, "echo [arg ...]\n");
-    std::fprintf(os_.stdout, "exit [n]\n");
-    std::fprintf(os_.stdout, "help\n");
-    std::fprintf(os_.stdout, "hostname [name]\n");
-    std::fprintf(os_.stdout, "ls [dir]\n");
-    std::fprintf(os_.stdout, "pwd\n");
+    fmt::print(os_.stdout, "cat [file]\n");
+    fmt::print(os_.stdout, "cd [dir]\n");
+    fmt::print(os_.stdout, "echo [arg ...]\n");
+    fmt::print(os_.stdout, "exit [n]\n");
+    fmt::print(os_.stdout, "help\n");
+    fmt::print(os_.stdout, "hostname [name]\n");
+    fmt::print(os_.stdout, "ls [dir]\n");
+    fmt::print(os_.stdout, "pwd\n");
     return 0;
 }
 
 int Shell::hostname(int argc, char** argv) {
     assert(argv[0] == "hostname"sv);
     if (argc > 1) {
-        std::fprintf(os_.stdout, "%s: changing hostname not yet implemented\n", argv[0]);
+        fmt::print(os_.stdout, "{}: changing hostname not yet implemented\n", argv[0]);
     }
     auto sv = os_.gethostname();
-    std::fprintf(os_.stdout, "%.*s\n", static_cast<int>(sv.length()), sv.data());
+    fmt::print(os_.stdout, "{}\n", sv);
     return 0;
 }
 
@@ -192,7 +194,7 @@ int Shell::ls(int argc, char** argv_) {
         try {
             PathCommand cmd(os_, path, PathCommand::Action::LS);
         } catch (PathCommand::Exception const& ex) {
-            std::fprintf(os_.stdout, "%s: %s: %s\n", argv[0], ex.path.c_str(), ex.message.c_str());
+            fmt::print(os_.stdout, "{}: {}: {}\n", argv[0], ex.path, ex.message);
             return ex.code;
         }
     }
@@ -202,7 +204,7 @@ int Shell::ls(int argc, char** argv_) {
 int Shell::pwd(int argc, char** argv) {
     assert(argv[0] == "pwd"sv);
     auto const& path = os_.getcwd();
-    std::fprintf(os_.stdout, "%s\n", path.c_str());
+    fmt::print(os_.stdout, "{}\n", path);
     return 0;
 }
 
