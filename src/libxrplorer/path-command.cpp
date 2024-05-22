@@ -1,6 +1,5 @@
 #include <src/libxrplorer/path-command.hpp>
 
-#include <xrpl/basics/base_uint.h>
 #include <xrpl/protocol/Serializer.h>
 
 #include <fmt/core.h>
@@ -10,17 +9,29 @@
 #include <iterator>
 #include <numeric>
 
+namespace ripple {
+template <std::size_t Bits, class Tag>
+auto format_as(base_uint<Bits, Tag> const& uint) {
+    return to_string(uint);
+}
+}
+
 namespace xrplorer {
 
 fs::path make_path(fs::path::iterator begin, fs::path::iterator end) {
     return std::accumulate(begin, end, fs::path{}, std::divides{});
 }
 
+// TODO: Pair these with their message strings.
 enum ErrorCode {
+    // Path is not an entry in its parent directory.
     DOES_NOT_EXIST,
     NOT_A_FILE,
     NOT_A_DIRECTORY,
     NOT_A_DIGEST,
+    // Path contents are missing.
+    OBJECT_MISSING,
+    TYPE_UNKNOWN,
 };
 
 void PathCommand::throw_(int code, std::string_view message) {
@@ -68,14 +79,7 @@ void PathCommand::nodesLayer() {
         if (!digest.parseHex(name)) {
             return throw_(NOT_A_DIGEST, "not a digest");
         }
-        auto object = os_.db()->fetchNodeObject(digest);
-        if (!object) {
-            return notExists();
-        }
-        switch (object->getType()) {
-            case ripple::hotLEDGER: return headerLayer(*object);
-        }
-        return;
+        return nodeBranch(digest);
     }
     if (action_ == CD) {
         os_.chdir(path_.native());
@@ -91,11 +95,37 @@ void PathCommand::nodesLayer() {
     }
 }
 
-void PathCommand::headerLayer(ripple::NodeObject& object) {
+void PathCommand::nodeBranch(ripple::uint256 const& digest) {
+    auto object = os_.db()->fetchNodeObject(digest);
+    if (!object) {
+        return throw_(OBJECT_MISSING, "object missing");
+    }
+    switch (object->getType()) {
+        case ripple::hotLEDGER: return headerLayer(*object);
+    }
+    return throw_(TYPE_UNKNOWN, "type unknown");
+}
+
+void PathCommand::headerLayer(ripple::NodeObject const& object) {
+    auto const& slice = object.getData();
+    ripple::SerialIter sit(slice.data(), slice.size());
+    auto sequence = sit.get32();
+    sit.skip(8);
+    auto parentDigest = sit.get256();
+    auto txnsDigest = sit.get256();
+    auto stateDigest = sit.get256();
     if (it_ != path_.end()) {
         auto const& name = *it_++;
-        fmt::print(os_.stdout, "header field: {}\n", name);
-        return;
+        if (name == "parent") {
+            return nodeBranch(parentDigest);
+        }
+        if (name == "txns") {
+            return nodeBranch(txnsDigest);
+        }
+        if (name == "state") {
+            return nodeBranch(stateDigest);
+        }
+        return notExists();
     }
     if (action_ == CD) {
         os_.chdir(path_.native());
@@ -103,13 +133,6 @@ void PathCommand::headerLayer(ripple::NodeObject& object) {
         return;
     }
     if (action_ == LS) {
-        auto const& slice = object.getData();
-        ripple::SerialIter sit(slice.data(), slice.size());
-        auto sequence = sit.get32();
-        sit.skip(8);
-        auto parentDigest = ripple::to_string(sit.get256());
-        auto txnsDigest = ripple::to_string(sit.get256());
-        auto stateDigest = ripple::to_string(sit.get256());
         fmt::print(os_.stdout, "sequence\n");
         fmt::print(os_.stdout, "parent -> /nodes/{}\n", parentDigest);
         fmt::print(os_.stdout, "txns -> /nodes/{}\n", txnsDigest);

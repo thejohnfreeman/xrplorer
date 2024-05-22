@@ -3,6 +3,7 @@
 
 #include <xrplorer/operating-system.hpp>
 
+#include <xrpl/basics/base_uint.h>
 #include <xrpl/nodestore/NodeObject.h>
 
 #include <cassert>
@@ -53,7 +54,8 @@ private:
     void notExists();
     void rootLayer();
     void nodesLayer();
-    void headerLayer(ripple::NodeObject& object);
+    void nodeBranch(ripple::uint256 const& digest);
+    void headerLayer(ripple::NodeObject const& object);
 };
 
 }
