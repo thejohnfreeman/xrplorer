@@ -3,6 +3,8 @@
 
 #include <xrplorer/operating-system.hpp>
 
+#include <fmt/std.h>
+#include <spdlog/spdlog.h>
 #include <xrpl/basics/base_uint.h>
 #include <xrpl/nodestore/NodeObject.h>
 
@@ -42,9 +44,14 @@ public:
     PathCommand(OperatingSystem& os, fs::path path, Action action)
         : os_(os), path_(path.lexically_normal()), it_(path_.begin()), action_(action)
     {
+        // TODO: Control log level.
+        // spdlog::info("path: {}", path_);
+        // for (auto it = path_.begin(); it != path_.end(); ++it) {
+        //     spdlog::info("step: {}", *it);
+        // }
         assert(*it_ == "/");
         ++it_;
-        rootLayer();
+        rootDirectory();
     }
 
 private:
@@ -52,10 +59,13 @@ private:
     void notFile();
     void notDirectory();
     void notExists();
-    void rootLayer();
-    void nodesLayer();
+    void skipEmpty();
+    void rootDirectory();
+    void nodesDirectory();
     void nodeBranch(ripple::uint256 const& digest);
-    void headerLayer(ripple::NodeObject const& object);
+    void headerDirectory(ripple::NodeObject const& object);
+    template <typename T>
+    void valueFile(T const& value);
 };
 
 }

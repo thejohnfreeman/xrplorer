@@ -1,9 +1,8 @@
 #include <src/libxrplorer/path-command.hpp>
 
-#include <xrpl/protocol/Serializer.h>
-
 #include <fmt/core.h>
 #include <fmt/std.h>
+#include <xrpl/protocol/LedgerHeader.h>
 
 #include <functional>
 #include <iterator>
@@ -50,11 +49,16 @@ void PathCommand::notExists() {
     return throw_(DOES_NOT_EXIST, "no such file or directory");
 }
 
-void PathCommand::rootLayer() {
+void PathCommand::skipEmpty() {
+    for (; it_ != path_.end() && (*it_ == "" || *it_ == "."); ++it_);
+}
+
+void PathCommand::rootDirectory() {
+    skipEmpty();
     if (it_ != path_.end()) {
         auto const& name = *it_++;
         if (name == "nodes") {
-            return nodesLayer();
+            return nodesDirectory();
         }
         return notExists();
     }
@@ -72,7 +76,8 @@ void PathCommand::rootLayer() {
     }
 }
 
-void PathCommand::nodesLayer() {
+void PathCommand::nodesDirectory() {
+    skipEmpty();
     if (it_ != path_.end()) {
         auto const& name = *it_++;
         ripple::uint256 digest;
@@ -101,29 +106,29 @@ void PathCommand::nodeBranch(ripple::uint256 const& digest) {
         return throw_(OBJECT_MISSING, "object missing");
     }
     switch (object->getType()) {
-        case ripple::hotLEDGER: return headerLayer(*object);
+        case ripple::hotLEDGER: return headerDirectory(*object);
     }
     return throw_(TYPE_UNKNOWN, "type unknown");
 }
 
-void PathCommand::headerLayer(ripple::NodeObject const& object) {
-    auto const& slice = object.getData();
-    ripple::SerialIter sit(slice.data(), slice.size());
-    auto sequence = sit.get32();
-    sit.skip(8);
-    auto parentDigest = sit.get256();
-    auto txnsDigest = sit.get256();
-    auto stateDigest = sit.get256();
+void PathCommand::headerDirectory(ripple::NodeObject const& object) {
+    skipEmpty();
+    // TODO: Shouldn't Slice have an implicit constructor from vector of bytes?
+    auto const& slice = ripple::makeSlice(object.getData());
+    ripple::LedgerHeader header{ripple::deserializePrefixedHeader(slice)};
     if (it_ != path_.end()) {
         auto const& name = *it_++;
+        if (name == "sequence") {
+            return valueFile(header.seq);
+        }
         if (name == "parent") {
-            return nodeBranch(parentDigest);
+            return nodeBranch(header.parentHash);
         }
         if (name == "txns") {
-            return nodeBranch(txnsDigest);
+            return nodeBranch(header.txHash);
         }
         if (name == "state") {
-            return nodeBranch(stateDigest);
+            return nodeBranch(header.accountHash);
         }
         return notExists();
     }
@@ -134,9 +139,9 @@ void PathCommand::headerLayer(ripple::NodeObject const& object) {
     }
     if (action_ == LS) {
         fmt::print(os_.stdout, "sequence\n");
-        fmt::print(os_.stdout, "parent -> /nodes/{}\n", parentDigest);
-        fmt::print(os_.stdout, "txns -> /nodes/{}\n", txnsDigest);
-        fmt::print(os_.stdout, "state -> /nodes/{}\n", stateDigest);
+        fmt::print(os_.stdout, "parent -> /nodes/{}\n", header.parentHash);
+        fmt::print(os_.stdout, "txns -> /nodes/{}\n", header.txHash);
+        fmt::print(os_.stdout, "state -> /nodes/{}\n", header.accountHash);
         return;
     }
     if (action_ == CAT) {
@@ -144,5 +149,22 @@ void PathCommand::headerLayer(ripple::NodeObject const& object) {
     }
 }
 
+template <typename T>
+void PathCommand::valueFile(T const& value) {
+    if (it_ != path_.end()) {
+        return notDirectory();
+    }
+    if (action_ == CD) {
+        return notDirectory();
+    }
+    if (action_ == LS) {
+        fmt::print(os_.stdout, "{}\n", path_);
+        return;
+    }
+    if (action_ == CAT) {
+        fmt::print(os_.stdout, "{}\n", value);
+        return;
+    }
+}
 
 }
