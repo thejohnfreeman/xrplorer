@@ -46,6 +46,8 @@ public:
     fs::path path_;
     fs::path::iterator it_;
     Action action_;
+    // The nearest SHAMap root, if any.
+    NodePtr root_;
 
 public:
     PathCommand(OperatingSystem& os, fs::path path, Action action)
@@ -68,14 +70,14 @@ private:
     void notExists();
     void notImplemented();
     void skipEmpty();
-    NodePtr load(NodePtr const& root, ripple::Keylet const& keylet);
+    NodePtr load(ripple::Keylet const& keylet);
     void rootDirectory();
     void nodesDirectory();
     void nodeBranch(ripple::uint256 const& digest);
     void headerDirectory(NodePtr const& object);
     void stateDirectory(ripple::uint256 const& digest);
-    void accountsDirectory(NodePtr const& root);
-    void sleDirectory(NodePtr const& root, SLE const& account);
+    void accountsDirectory();
+    void sleDirectory(SLE const& account);
     void sfieldFile(ripple::STBase const& sfield);
     void innerDirectory(NodePtr const& object);
     void leafDirectory(NodePtr const& object);

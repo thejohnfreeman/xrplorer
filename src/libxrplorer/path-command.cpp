@@ -1,5 +1,7 @@
 #include <src/libxrplorer/path-command.hpp>
 
+#include <xrplorer/tlpush.hpp>
+
 #include <fmt/core.h>
 #include <fmt/std.h>
 #include <xrpl/protocol/AccountID.h>
@@ -226,7 +228,8 @@ void PathCommand::stateDirectory(ripple::uint256 const& digest) {
             if (!root) {
                 return notExists();
             }
-            return accountsDirectory(root);
+            tlpush _root{root_, std::move(root)};
+            return accountsDirectory();
         }
         return notImplemented();
     }
@@ -259,10 +262,9 @@ unsigned int selectBranch(int depth, ripple::uint256 const& key) {
     return branch;
 }
 
-NodePtr PathCommand::load(
-    NodePtr const& root, ripple::Keylet const& keylet)
-{
-    NodePtr object{root};
+NodePtr PathCommand::load(ripple::Keylet const& keylet) {
+    assert(root_);
+    NodePtr object{root_};
     // One-past-end depth is 256 / 4 = 64.
     for (auto depth = 0; depth < 64; ++depth) {
         auto const& slice = ripple::makeSlice(object->getData());
@@ -288,7 +290,7 @@ NodePtr PathCommand::load(
     return object;
 }
 
-void PathCommand::accountsDirectory(NodePtr const& root) {
+void PathCommand::accountsDirectory() {
     skipEmpty();
     if (it_ != path_.end()) {
         auto const& b58AccountID = *it_++;
@@ -297,12 +299,12 @@ void PathCommand::accountsDirectory(NodePtr const& root) {
             return notExists();
         }
         auto keylet = ripple::keylet::account(*optAccountID);
-        auto object = load(root, keylet);
+        auto object = load(keylet);
         if (!object) {
             return notExists();
         }
         auto account = make_sle(keylet, object);
-        return sleDirectory(root, account);
+        return sleDirectory(account);
     }
     if (action_ == CD) {
         os_.chdir(path_.generic_string());
@@ -318,12 +320,16 @@ void PathCommand::accountsDirectory(NodePtr const& root) {
     }
 }
 
-void PathCommand::sleDirectory(NodePtr const& root, SLE const& sle) {
+void PathCommand::sleDirectory(SLE const& sle) {
+    // `root` is unused for now, but we'll want it later to follow links.
     skipEmpty();
     if (it_ != path_.end()) {
-        auto const& fieldName = *it_++;
+        auto const& name = *it_++;
+        if (name == ".key") {
+            return valueFile(sle.key());
+        }
         for (auto const& field : sle) {
-            if (field.getFName().getName() == fieldName) {
+            if (field.getFName().getName() == name) {
                 return sfieldFile(field);
             }
         }
@@ -335,12 +341,11 @@ void PathCommand::sleDirectory(NodePtr const& root, SLE const& sle) {
         return;
     }
     if (action_ == LS) {
+        fmt::print(os_.stdout, ".key\n");
         for (auto const& field : sle) {
             if (field.isDefault() && field.getText() == "") {
                 continue;
             }
-            // fmt::print(os_.stdout, "t: {}\n", field.getText());
-            // fmt::print(os_.stdout, "f: {}\n", field.getFullText());
             fmt::print(os_.stdout, "{}\n", field.getFName().getName());
         }
         return;
