@@ -7,16 +7,22 @@
 #include <spdlog/spdlog.h>
 #include <xrpl/basics/base_uint.h>
 #include <xrpl/nodestore/NodeObject.h>
+#include <xrpl/protocol/Keylet.h>
+#include <xrpl/protocol/STLedgerEntry.h>
 
 #include <cassert>
 #include <filesystem>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <string_view>
 
 namespace xrplorer {
 
 namespace fs = std::filesystem;
+
+using NodePtr = std::shared_ptr<ripple::NodeObject>;
+using SLE = ripple::STLedgerEntry;
 
 class PathCommand {
 public:
@@ -61,14 +67,18 @@ private:
     void notExists();
     void notImplemented();
     void skipEmpty();
+    NodePtr load(NodePtr const& root, ripple::Keylet const& keylet);
     void rootDirectory();
     void nodesDirectory();
     void nodeBranch(ripple::uint256 const& digest);
-    void headerDirectory(ripple::NodeObject const& object);
+    void headerDirectory(NodePtr const& object);
     void stateDirectory(ripple::uint256 const& digest);
-    void innerDirectory(ripple::NodeObject const& object);
+    void accountsDirectory(NodePtr const& root);
+    void sleDirectory(NodePtr const& root, SLE const& account);
+    void innerDirectory(NodePtr const& object);
+    void leafDirectory(NodePtr const& object);
     // A transaction with metadata.
-    void sndDirectory(ripple::NodeObject const& object);
+    void sndDirectory(NodePtr const& object);
     template <typename T>
     void valueFile(T const& value);
 };

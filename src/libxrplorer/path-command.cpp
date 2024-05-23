@@ -2,7 +2,12 @@
 
 #include <fmt/core.h>
 #include <fmt/std.h>
+#include <xrpl/protocol/AccountID.h>
+#include <xrpl/protocol/Indexes.h>
+#include <xrpl/protocol/Keylet.h>
+#include <xrpl/protocol/LedgerFormats.h>
 #include <xrpl/protocol/LedgerHeader.h>
+#include <xrpl/protocol/STLedgerEntry.h>
 #include <xrpl/beast/utility/Zero.h>
 
 #include <functional>
@@ -18,9 +23,11 @@ auto format_as(base_uint<Bits, Tag> const& uint) {
 auto format_as(NodeObjectType const& type) {
     return to_string(type);
 }
+auto format_as(LedgerEntryType type) {
+    return fmt::format("0x{:04X}", std::underlying_type_t<LedgerEntryType>(type));
+}
 auto format_as(HashPrefix prefix) {
     // Prefix is 3 ASCII characters packed into a std::uint32_t.
-    // TODO: Can we get down to one string allocation?
     std::uint32_t i = static_cast<std::underlying_type_t<HashPrefix>>(prefix);
     char a = (i >> 24) & 0xFF;
     char b = (i >> 16) & 0xFF;
@@ -31,6 +38,8 @@ auto format_as(HashPrefix prefix) {
 
 namespace xrplorer {
 
+static constexpr int NBYTES_DIGEST = 256 / 8;
+
 ripple::HashPrefix deserializePrefix(ripple::Slice const& slice) {
     ripple::SerialIter sit{slice.data(), slice.size()};
     auto prefix = ripple::safe_cast<ripple::HashPrefix>(sit.get32());
@@ -39,6 +48,30 @@ ripple::HashPrefix deserializePrefix(ripple::Slice const& slice) {
 
 fs::path make_path(fs::path::iterator begin, fs::path::iterator end) {
     return std::accumulate(begin, end, fs::path{}, std::divides{});
+}
+
+SLE make_sle(ripple::Keylet const& keylet, NodePtr const& object) {
+    // A `Slice` is passed to `SHAMapTreeNode::makeFromPrefix`
+    // which removes the 4 byte prefix.
+    auto slice = ripple::makeSlice(object->getData());
+    slice.remove_prefix(4);
+    // It passes the remaining slice to `SHAMapTreeNode::makeAccountState`
+    // which constructs a `Serializer`
+    // (which calls itself the replacement for now-deprecated `SerialIter`)
+    // and removes the 32 byte suffix.
+    // (That suffix should match the keylet key, by the way).
+    ripple::Serializer serializer{slice.data(), slice.size()};
+    serializer.chop(32);
+    // Then it constructs a _new_ `Slice` from the `Serializer`
+    // and passes it to `ripple::make_shamapitem`,
+    // which `memcpy`s the bytes into a `SHAMapItem`.
+    // I don't know where an `STObject` is ever constructed by `SHAMap`,
+    // but that final slice is the one it is expecting.
+    auto slice2 = serializer.slice();
+    // An `STLedgerEntry` cannot be constructed
+    // with a `Slice` or a `Serializer`, though. Only a `SerialIter`.
+    ripple::SerialIter sit{slice2.data(), slice2.size()};
+    return SLE{sit, keylet.key};
 }
 
 // TODO: Pair these with their message strings.
@@ -134,18 +167,19 @@ void PathCommand::nodeBranch(ripple::uint256 const& digest) {
     auto const& slice = ripple::makeSlice(object->getData());
     auto prefix = deserializePrefix(slice);
     switch (prefix) {
-        case ripple::HashPrefix::ledgerMaster: return headerDirectory(*object);
-        case ripple::HashPrefix::txNode: return sndDirectory(*object);
-        case ripple::HashPrefix::innerNode: return innerDirectory(*object);
+        case ripple::HashPrefix::ledgerMaster: return headerDirectory(object);
+        case ripple::HashPrefix::txNode: return sndDirectory(object);
+        case ripple::HashPrefix::innerNode: return innerDirectory(object);
+        case ripple::HashPrefix::leafNode: return leafDirectory(object);
     }
     spdlog::error("type unknown: {}", prefix);
     return throw_(TYPE_UNKNOWN, "type unknown");
 }
 
-void PathCommand::headerDirectory(ripple::NodeObject const& object) {
+void PathCommand::headerDirectory(NodePtr const& object) {
     skipEmpty();
     // TODO: Shouldn't Slice have an implicit constructor from vector of bytes?
-    auto const& slice = ripple::makeSlice(object.getData());
+    auto const& slice = ripple::makeSlice(object->getData());
     ripple::LedgerHeader header{ripple::deserializePrefixedHeader(slice)};
     if (it_ != path_.end()) {
         auto const& name = *it_++;
@@ -187,6 +221,13 @@ void PathCommand::stateDirectory(ripple::uint256 const& digest) {
         if (name == "root") {
             return nodeBranch(digest);
         }
+        if (name == "accounts") {
+            auto root = os_.db()->fetchNodeObject(digest);
+            if (!root) {
+                return notExists();
+            }
+            return accountsDirectory(root);
+        }
         return notImplemented();
     }
     if (action_ == CD) {
@@ -204,9 +245,106 @@ void PathCommand::stateDirectory(ripple::uint256 const& digest) {
     }
 }
 
-void PathCommand::innerDirectory(ripple::NodeObject const& object) {
+// TODO: Is this constant exported by libxrpl?
+// SHAMapInnerNode::branchFactor is not exported.
+constexpr auto BRANCH_FACTOR = 16;
+
+unsigned int selectBranch(int depth, ripple::uint256 const& key) {
+    auto branch = static_cast<unsigned int>(*(key.begin() + (depth / 2)));
+    if (depth & 1)
+        branch &= 0xf;
+    else
+        branch >>= 4;
+    assert(branch < BRANCH_FACTOR);
+    return branch;
+}
+
+NodePtr PathCommand::load(
+    NodePtr const& root, ripple::Keylet const& keylet)
+{
+    NodePtr object{root};
+    // One-past-end depth is 256 / 4 = 64.
+    for (auto depth = 0; depth < 64; ++depth) {
+        auto const& slice = ripple::makeSlice(object->getData());
+        ripple::SerialIter sit{slice.data(), slice.size()};
+        auto prefix = ripple::safe_cast<ripple::HashPrefix>(sit.get32());
+        if (prefix == ripple::HashPrefix::leafNode) {
+            break;
+        }
+        if (prefix != ripple::HashPrefix::innerNode) {
+            return {};
+        }
+        auto childIndex = selectBranch(depth, keylet.key);
+        sit.skip(NBYTES_DIGEST * childIndex);
+        auto childDigest = sit.get256();
+        if (childDigest == beast::zero) {
+            return {};
+        }
+        object = os_.db()->fetchNodeObject(childDigest);
+        if (!object) {
+            return {};
+        }
+    }
+    return object;
+}
+
+void PathCommand::accountsDirectory(NodePtr const& root) {
     skipEmpty();
-    auto const& slice = ripple::makeSlice(object.getData());
+    if (it_ != path_.end()) {
+        auto const& b58AccountID = *it_++;
+        auto optAccountID = ripple::parseBase58<ripple::AccountID>(b58AccountID);
+        if (!optAccountID) {
+            return notExists();
+        }
+        auto keylet = ripple::keylet::account(*optAccountID);
+        auto object = load(root, keylet);
+        if (!object) {
+            return notExists();
+        }
+        auto account = make_sle(keylet, object);
+        return sleDirectory(root, account);
+    }
+    if (action_ == CD) {
+        os_.chdir(path_.generic_string());
+        os_.setenv("PWD", path_.generic_string());
+        return;
+    }
+    if (action_ == LS) {
+        fmt::print(os_.stdout, "<base58 address, e.g. rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh>\n");
+        return;
+    }
+    if (action_ == CAT) {
+        return notFile();
+    }
+}
+
+void PathCommand::sleDirectory(NodePtr const& root, SLE const& sle) {
+    skipEmpty();
+    if (it_ != path_.end()) {
+        auto const& fieldName = *it_++;
+        return;
+    }
+    if (action_ == CD) {
+        os_.chdir(path_.generic_string());
+        os_.setenv("PWD", path_.generic_string());
+        return;
+    }
+    if (action_ == LS) {
+        for (auto const& field : sle) {
+            // fmt::print(os_.stdout, "t: {}\n", field.getText());
+            // fmt::print(os_.stdout, "f: {}\n", field.getFullText());
+            fmt::print(os_.stdout, "{}\n", field.getFName().getName());
+        }
+        return;
+    }
+    if (action_ == CAT) {
+        return notFile();
+    }
+}
+
+void PathCommand::innerDirectory(NodePtr const& object) {
+    skipEmpty();
+    auto const& slice = ripple::makeSlice(object->getData());
     ripple::SerialIter sit(slice.data(), slice.size());
     // Consume the prefix.
     sit.get32();
@@ -219,15 +357,15 @@ void PathCommand::innerDirectory(ripple::NodeObject const& object) {
             return notExists();
         }
         char const c = name[0];
-        int index;
+        int i;
         if (c >= '0' && c <= '9') {
-            index = c - '0';
+            i = c - '0';
         } else if (c >= 'A' && c <= 'F') {
-            index = 10 + c - 'A';
+            i = 10 + c - 'A';
         } else {
             return notExists();
         }
-        sit.skip((256 / 8) * index);
+        sit.skip(NBYTES_DIGEST * i);
         auto childDigest = sit.get256();
         return nodeBranch(childDigest);
     }
@@ -237,10 +375,7 @@ void PathCommand::innerDirectory(ripple::NodeObject const& object) {
         return;
     }
     if (action_ == LS) {
-        // TODO: Is this constant exported by libxrpl?
-        // SHAMapInnerNode::branchFactor is not exported.
-        constexpr auto branchFactor = 16;
-        for (auto i = 0; i < branchFactor; ++i) {
+        for (auto i = 0; i < BRANCH_FACTOR; ++i) {
             auto childDigest = sit.get256();
             if (childDigest == beast::zero)
             {
@@ -256,7 +391,27 @@ void PathCommand::innerDirectory(ripple::NodeObject const& object) {
     }
 }
 
-void PathCommand::sndDirectory(ripple::NodeObject const& object) {
+void PathCommand::leafDirectory(NodePtr const& object) {
+    skipEmpty();
+    // TODO: How do we find the key of the object?
+    if (it_ != path_.end()) {
+        auto const& fieldName = *it_++;
+        return;
+    }
+    if (action_ == CD) {
+        os_.chdir(path_.generic_string());
+        os_.setenv("PWD", path_.generic_string());
+        return;
+    }
+    if (action_ == LS) {
+        return;
+    }
+    if (action_ == CAT) {
+        return notFile();
+    }
+}
+
+void PathCommand::sndDirectory(NodePtr const& object) {
     skipEmpty();
     return notImplemented();
 }

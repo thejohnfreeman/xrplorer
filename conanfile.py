@@ -3,7 +3,10 @@ from conan.tools.cmake import CMake, cmake_layout
 
 class Xrplorer(ConanFile):
     name = 'xrplorer'
-    version = '0.1.0'
+
+    def set_version(self):
+        if self.version is None:
+            self.version = '0.1.0'
 
     license = 'ISC'
     author = 'John Freeman <jfreeman08@gmail.com>'
