@@ -52,6 +52,19 @@ fs::path make_path(fs::path::iterator begin, fs::path::iterator end) {
     return std::accumulate(begin, end, fs::path{}, std::divides{});
 }
 
+SLE make_sle(NodePtr const& object) {
+    auto slice = ripple::makeSlice(object->getData());
+    slice.remove_prefix(4);
+    ripple::Serializer serializer{slice.data(), slice.size()};
+    ripple::uint256 key;
+    bool success = serializer.getBitString(key, serializer.size() - key.bytes);
+    assert(success);
+    serializer.chop(key.bytes);
+    auto slice2 = serializer.slice();
+    ripple::SerialIter sit{slice2.data(), slice2.size()};
+    return SLE{sit, key};
+}
+
 SLE make_sle(ripple::Keylet const& keylet, NodePtr const& object) {
     // A `Slice` is passed to `SHAMapTreeNode::makeFromPrefix`
     // which removes the 4 byte prefix.
@@ -423,23 +436,7 @@ void PathCommand::innerDirectory(NodePtr const& object) {
 }
 
 void PathCommand::leafDirectory(NodePtr const& object) {
-    skipEmpty();
-    // TODO: How do we find the key of the object?
-    if (it_ != path_.end()) {
-        auto const& fieldName = *it_++;
-        return;
-    }
-    if (action_ == CD) {
-        os_.chdir(path_.generic_string());
-        os_.setenv("PWD", path_.generic_string());
-        return;
-    }
-    if (action_ == LS) {
-        return;
-    }
-    if (action_ == CAT) {
-        return notFile();
-    }
+    return sleDirectory(make_sle(object));
 }
 
 void PathCommand::sndDirectory(NodePtr const& object) {

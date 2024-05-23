@@ -77,7 +77,7 @@ private:
     void headerDirectory(NodePtr const& object);
     void stateDirectory(ripple::uint256 const& digest);
     void accountsDirectory();
-    void sleDirectory(SLE const& account);
+    void sleDirectory(SLE const& sle);
     void sfieldFile(ripple::STBase const& sfield);
     void innerDirectory(NodePtr const& object);
     void leafDirectory(NodePtr const& object);
