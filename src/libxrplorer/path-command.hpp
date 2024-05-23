@@ -8,6 +8,7 @@
 #include <xrpl/basics/base_uint.h>
 #include <xrpl/nodestore/NodeObject.h>
 #include <xrpl/protocol/Keylet.h>
+#include <xrpl/protocol/STBase.h>
 #include <xrpl/protocol/STLedgerEntry.h>
 
 #include <cassert>
@@ -75,6 +76,7 @@ private:
     void stateDirectory(ripple::uint256 const& digest);
     void accountsDirectory(NodePtr const& root);
     void sleDirectory(NodePtr const& root, SLE const& account);
+    void sfieldFile(ripple::STBase const& sfield);
     void innerDirectory(NodePtr const& object);
     void leafDirectory(NodePtr const& object);
     // A transaction with metadata.

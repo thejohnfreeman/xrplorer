@@ -151,7 +151,7 @@ void PathCommand::nodesDirectory() {
         return;
     }
     if (action_ == LS) {
-        fmt::print(os_.stdout, "node ids...\n");
+        fmt::print(os_.stdout, "<node ID>\n");
         return;
     }
     if (action_ == CAT) {
@@ -322,7 +322,12 @@ void PathCommand::sleDirectory(NodePtr const& root, SLE const& sle) {
     skipEmpty();
     if (it_ != path_.end()) {
         auto const& fieldName = *it_++;
-        return;
+        for (auto const& field : sle) {
+            if (field.getFName().getName() == fieldName) {
+                return sfieldFile(field);
+            }
+        }
+        return notExists();
     }
     if (action_ == CD) {
         os_.chdir(path_.generic_string());
@@ -331,6 +336,9 @@ void PathCommand::sleDirectory(NodePtr const& root, SLE const& sle) {
     }
     if (action_ == LS) {
         for (auto const& field : sle) {
+            if (field.isDefault() && field.getText() == "") {
+                continue;
+            }
             // fmt::print(os_.stdout, "t: {}\n", field.getText());
             // fmt::print(os_.stdout, "f: {}\n", field.getFullText());
             fmt::print(os_.stdout, "{}\n", field.getFName().getName());
@@ -339,6 +347,24 @@ void PathCommand::sleDirectory(NodePtr const& root, SLE const& sle) {
     }
     if (action_ == CAT) {
         return notFile();
+    }
+}
+
+void PathCommand::sfieldFile(ripple::STBase const& sfield) {
+    if (it_ != path_.end()) {
+        ++it_;
+        return notDirectory();
+    }
+    if (action_ == CD) {
+        return notDirectory();
+    }
+    if (action_ == LS) {
+        fmt::print(os_.stdout, "{}\n", path_);
+        return;
+    }
+    if (action_ == CAT) {
+        fmt::print(os_.stdout, "{}\n", sfield.getText());
+        return;
     }
 }
 
