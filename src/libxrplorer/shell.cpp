@@ -106,8 +106,8 @@ int Shell::cat(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         auto path = os_.getcwd() / argv[i];
         try {
-            PathCommand cmd(os_, path, PathCommand::Action::CAT);
-        } catch (PathCommand::Exception const& ex) {
+            PathCommand cmd(os_, path, Action::CAT);
+        } catch (Exception const& ex) {
             fmt::print(os_.stdout, "{}: {}: {}\n", argv[0], ex.path, ex.message);
             return ex.code;
         }
@@ -120,8 +120,8 @@ int Shell::cd(int argc, char** argv) {
     char const* suffix = (argc > 1) ? argv[1] : "/";
     auto path = os_.getcwd() / suffix;
     try {
-        PathCommand cmd(os_, path, PathCommand::Action::CD);
-    } catch (PathCommand::Exception const& ex) {
+        PathCommand cmd(os_, path, Action::CD);
+    } catch (Exception const& ex) {
         fmt::print(os_.stdout, "{}: {}: {}\n", argv[0], ex.path, ex.message);
         return ex.code;
     }
@@ -191,8 +191,8 @@ int Shell::ls(int argc, char** argv_) {
     for (int i = 1; i < argc; ++i) {
         auto path = os_.getcwd() / argv[i];
         try {
-            PathCommand cmd(os_, path, PathCommand::Action::LS);
-        } catch (PathCommand::Exception const& ex) {
+            PathCommand cmd(os_, path, Action::LS);
+        } catch (Exception const& ex) {
             fmt::print(os_.stdout, "{}: {}: {}\n", argv[0], ex.path, ex.message);
             return ex.code;
         }

@@ -89,20 +89,7 @@ SLE make_sle(ripple::Keylet const& keylet, NodePtr const& object) {
     return SLE{sit, keylet.key};
 }
 
-// TODO: Pair these with their message strings.
-enum ErrorCode {
-    NOT_IMPLEMENTED,
-    // Path is not an entry in its parent directory.
-    DOES_NOT_EXIST,
-    NOT_A_FILE,
-    NOT_A_DIRECTORY,
-    NOT_A_DIGEST,
-    // Path contents are missing.
-    OBJECT_MISSING,
-    TYPE_UNKNOWN,
-};
-
-void PathCommand::throw_(int code, std::string_view message) {
+void PathCommand::throw_(ErrorCode code, std::string_view message) {
     auto const& path = make_path(path_.begin(), it_);
     throw Exception{code, path, std::string{message}};
 }
@@ -177,7 +164,7 @@ void PathCommand::nodesDirectory() {
 void PathCommand::nodeBranch(ripple::uint256 const& digest) {
     auto object = os_.db()->fetchNodeObject(digest);
     if (!object) {
-        return throw_(OBJECT_MISSING, "object missing");
+        return throw_(NODE_MISSING, "node missing");
     }
     auto const& slice = ripple::makeSlice(object->getData());
     auto prefix = deserializePrefix(slice);

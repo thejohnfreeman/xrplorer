@@ -2,6 +2,7 @@
 #define XRPLORER_PATH_COMMAND_HPP
 
 #include <xrplorer/operating-system.hpp>
+#include <xrplorer/context.hpp>
 
 #include <fmt/std.h>
 #include <spdlog/spdlog.h>
@@ -27,21 +28,6 @@ using SLE = ripple::STLedgerEntry;
 
 class PathCommand {
 public:
-    /**
-     * The action to take at the end of a path.
-     */
-    enum Action {
-        CD,
-        LS,
-        CAT,
-    };
-
-    struct Exception {
-        int code;
-        fs::path path;
-        std::string message;
-    };
-
     OperatingSystem& os_;
     fs::path path_;
     fs::path::iterator it_;
@@ -64,7 +50,7 @@ public:
     }
 
 private:
-    void throw_(int code, std::string_view message);
+    void throw_(ErrorCode code, std::string_view message);
     void notFile();
     void notDirectory();
     void notExists();
