@@ -15,8 +15,6 @@ struct RootDirectory : public Directory<RootDirectory> {
     static void open(Context& ctx, fs::path const& name);
 };
 
-void nodeBranch(Context& ctx, ripple::uint256 const& digest);
-
 }
 
 #endif

@@ -12,6 +12,8 @@
 #include <xrpl/protocol/LedgerHeader.h>
 #include <xrpl/protocol/Serializer.h>
 #include <xrpl/protocol/STLedgerEntry.h>
+#include <xrpl/protocol/STTx.h>
+#include <xrpl/protocol/TxMeta.h>
 
 #include <cstdint>
 #include <memory>
@@ -99,6 +101,18 @@ SLE make_sle(Keylet const& keylet, NodePtr const& object) {
     SerialIter sit{slice2.data(), slice2.size()};
     return SLE{sit, keylet.key};
 }
+STObject make_txm(NodePtr const& object) {
+    auto slice = makeSlice(object->getData());
+    slice.remove_prefix(4);
+    Serializer serializer{slice.data(), slice.size()};
+    uint256 key;
+    bool success = serializer.getBitString(key, serializer.size() - key.bytes);
+    assert(success);
+    serializer.chop(key.bytes);
+    auto slice2 = serializer.slice();
+    SerialIter sit{slice2.data(), slice2.size()};
+    return STObject(std::move(sit), sfMetadata);
+}
 }
 
 namespace xrplorer {
@@ -128,9 +142,9 @@ static void nodeBranch(Context& ctx, ripple::uint256 const& digest) {
     auto prefix = ripple::deserializePrefix(object);
     switch (prefix) {
         case ripple::HashPrefix::ledgerMaster: return HeaderDirectory::call(ctx, object);
-        // case ripple::HashPrefix::txNode: return sndDirectory(object);
+        case ripple::HashPrefix::txNode: return TxmDirectory::call(ctx, object);
         case ripple::HashPrefix::innerNode: return InnerDirectory::call(ctx, object);
-        case ripple::HashPrefix::leafNode: return leafDirectory(ctx, object);
+        case ripple::HashPrefix::leafNode: return sleDirectory(ctx, object);
     }
     spdlog::error("type unknown: {}", prefix);
     throw ctx.throw_(TYPE_UNKNOWN, "type unknown");
@@ -185,6 +199,7 @@ struct StateDirectory : public SpecialDirectory<StateDirectory, const ripple::ui
 };
 
 struct InnerDirectory : public SpecialDirectory<InnerDirectory, const NodePtr> {
+    // TODO: Factor out common preamble to calling function.
     static std::vector<std::string> list(Context& ctx, value_type const& object) {
         // libxrpl does not have a deserialized representation of inner nodes.
         // An inner node is a directory with a subdirectory for each non-null child.
@@ -227,10 +242,6 @@ struct InnerDirectory : public SpecialDirectory<InnerDirectory, const NodePtr> {
         return nodeBranch(ctx, childDigest);
     }
 };
-
-static void leafDirectory(Context& ctx, NodePtr const& object) {
-    return SleDirectory::call(ctx, make_sle(object));
-}
 
 struct AccountsDirectory : public Directory<AccountsDirectory> {
     static std::vector<std::string> list(Context& ctx) {
@@ -281,6 +292,11 @@ static NodePtr load(Context& ctx, ripple::Keylet const& keylet) {
     return object;
 }
 
+static void sleDirectory(Context& ctx, NodePtr const& object) {
+    return SleDirectory::call(ctx, make_sle(object));
+}
+
+// TODO: Factor Sle and Txm directories to Sto directory.
 struct SleDirectory : public SpecialDirectory<SleDirectory, const SLE> {
     static std::vector<std::string> list(Context& ctx, value_type const& sle) {
         std::vector<std::string> names{".key"};
@@ -297,6 +313,29 @@ struct SleDirectory : public SpecialDirectory<SleDirectory, const SLE> {
             return valueFile(ctx, sle.key());
         }
         for (auto const& field : sle) {
+            if (field.getFName().getName() == name) {
+                return SfieldFile::call(ctx, field);
+            }
+        }
+        throw ctx.notExists();
+    }
+};
+
+struct TxmDirectory : public SpecialDirectory<TxmDirectory, const NodePtr> {
+    static std::vector<std::string> list(Context& ctx, value_type const& object) {
+        auto txm = make_txm(object);
+        std::vector<std::string> names;
+        for (auto const& field : txm) {
+            if (field.isDefault() && field.getText() == "") {
+                continue;
+            }
+            names.push_back(field.getFName().getName());
+        }
+        return names;
+    }
+    static void open(Context& ctx, value_type const& object, fs::path const& name) {
+        auto txm = make_txm(object);
+        for (auto const& field : txm) {
             if (field.getFName().getName() == name) {
                 return SfieldFile::call(ctx, field);
             }
