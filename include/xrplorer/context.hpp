@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace xrplorer {
 
@@ -17,14 +18,14 @@ namespace fs = std::filesystem;
 
 using NodePtr = std::shared_ptr<ripple::NodeObject>;
 
-enum Action {
+enum XRPLORER_EXPORT Action {
     CD,
     LS,
     CAT,
 };
 
 // TODO: Pair these with their message strings.
-enum ErrorCode {
+enum XRPLORER_EXPORT ErrorCode {
     NOT_IMPLEMENTED,
     // Path is not an entry in its parent directory.
     DOES_NOT_EXIST,
@@ -36,7 +37,7 @@ enum ErrorCode {
     TYPE_UNKNOWN,
 };
 
-struct Exception {
+struct XRPLORER_EXPORT Exception {
     ErrorCode code;
     fs::path path;
     std::string message;
@@ -47,7 +48,7 @@ struct XRPLORER_EXPORT Context {
     // The path argument as written.
     std::string_view argument;
     // The path argument as interpreted.
-    fs::path path;
+    fs::path& path;
     fs::path::iterator it;
     Action action;
     // The prefix for tab-completion, if any.
@@ -55,12 +56,14 @@ struct XRPLORER_EXPORT Context {
     // The nearest SHAMap root, if any.
     NodePtr root;
 
-    void throw_(ErrorCode code, std::string_view message);
-    void notFile();
-    void notDirectory();
-    void notExists();
-    void notImplemented();
+    Exception throw_(ErrorCode code, std::string_view message);
+    Exception notFile();
+    Exception notDirectory();
+    Exception notExists();
+    Exception notImplemented();
     void skipEmpty();
+    void list(std::vector<std::string> const& names);
+    void echo(std::string_view text);
 };
 
 }

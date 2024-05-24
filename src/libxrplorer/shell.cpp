@@ -1,6 +1,6 @@
 #include <xrplorer/shell.hpp>
-
-#include <src/libxrplorer/path-command.hpp>
+#include <xrplorer/context.hpp>
+#include <xrplorer/filesystem.hpp>
 
 #include <boost/program_options/parsers.hpp>
 #include <fmt/core.h>
@@ -101,12 +101,26 @@ int Shell::main(int argc, char** argv) {
     return 0;
 }
 
+void command(OperatingSystem& os, std::string_view argument, Action action) {
+    auto path = (os.getcwd() / argument).lexically_normal();
+    auto it = path.begin();
+    assert(*it == "/");
+    ++it;
+    Context ctx {
+        .os = os,
+        .argument = argument,
+        .path = path,
+        .it = std::move(it),
+        .action = action,
+    };
+    RootDirectory::call(ctx);
+}
+
 int Shell::cat(int argc, char** argv) {
     assert(argv[0] == "cat"sv);
     for (int i = 1; i < argc; ++i) {
-        auto path = os_.getcwd() / argv[i];
         try {
-            PathCommand cmd(os_, path, Action::CAT);
+            command(os_, argv[i], Action::CAT);
         } catch (Exception const& ex) {
             fmt::print(os_.stdout, "{}: {}: {}\n", argv[0], ex.path, ex.message);
             return ex.code;
@@ -118,9 +132,8 @@ int Shell::cat(int argc, char** argv) {
 int Shell::cd(int argc, char** argv) {
     assert(argv[0] == "cd"sv);
     char const* suffix = (argc > 1) ? argv[1] : "/";
-    auto path = os_.getcwd() / suffix;
     try {
-        PathCommand cmd(os_, path, Action::CD);
+        command(os_, suffix, Action::CD);
     } catch (Exception const& ex) {
         fmt::print(os_.stdout, "{}: {}: {}\n", argv[0], ex.path, ex.message);
         return ex.code;
@@ -189,9 +202,8 @@ int Shell::ls(int argc, char** argv_) {
         argv = DEFAULT_ARGV_LS;
     }
     for (int i = 1; i < argc; ++i) {
-        auto path = os_.getcwd() / argv[i];
         try {
-            PathCommand cmd(os_, path, Action::LS);
+            command(os_, argv[i], Action::LS);
         } catch (Exception const& ex) {
             fmt::print(os_.stdout, "{}: {}: {}\n", argv[0], ex.path, ex.message);
             return ex.code;
