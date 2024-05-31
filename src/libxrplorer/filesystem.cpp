@@ -44,7 +44,7 @@ auto format_as(HashPrefix prefix) {
 HashPrefix deserializePrefix(NodePtr const& object) {
     // TODO: Shouldn't Slice have an implicit constructor from vector of bytes?
     auto const& slice = makeSlice(object->getData());
-    SerialIter sit{slice.data(), slice.size()};
+    SerialIter sit{slice};
     auto prefix = safe_cast<HashPrefix>(sit.get32());
     return prefix;
 }
@@ -52,8 +52,6 @@ LedgerHeader deserializePrefixedHeader(NodePtr const& object) {
     auto const& slice = makeSlice(object->getData());
     return deserializePrefixedHeader(slice);
 }
-// TODO: Is this constant exported by libxrpl?
-// SHAMapInnerNode::branchFactor is not exported.
 struct SHAMapInnerNode {
     static constexpr unsigned int branchFactor = 16;
 };
@@ -110,8 +108,10 @@ STObject make_txm(NodePtr const& object) {
     assert(success);
     serializer.chop(key.bytes);
     auto slice2 = serializer.slice();
-    SerialIter sit{slice2.data(), slice2.size()};
-    return STObject(std::move(sit), sfMetadata);
+    spdlog::info("txm.bytes: {}", slice2.size());
+    SerialIter sit{slice2};
+    STObject st{sit, sfMetadata};
+    return st;
 }
 }
 

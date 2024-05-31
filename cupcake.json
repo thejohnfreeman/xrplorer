@@ -15,7 +15,7 @@
       "name": "xrplorer",
       "links": [
         "${PROJECT_NAME}.imports.main",
-        "xrplorer.libxrplorer"
+        "xrplorer.library"
       ]
     }
   ],
@@ -157,7 +157,7 @@
       "name": "xrplorer",
       "links": [
         "${PROJECT_NAME}.imports.test",
-        "xrplorer.libxrplorer"
+        "xrplorer.library"
       ]
     }
   ]

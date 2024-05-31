@@ -10,6 +10,9 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <string_view>
+
+using namespace std::literals;
 
 namespace xrplorer {
 
@@ -195,12 +198,12 @@ int Shell::hostname(int argc, char** argv) {
 char const* DEFAULT_ARGV_LS[] = {"ls", "."};
 
 int Shell::ls(int argc, char** argv_) {
-    assert(argv[0] == "ls"sv);
     char const* const* argv = argv_;
     if (argc == 1) {
         argc = 2;
         argv = DEFAULT_ARGV_LS;
     }
+    assert(argv[0] == "ls"sv);
     for (int i = 1; i < argc; ++i) {
         try {
             command(os_, argv[i], Action::LS);

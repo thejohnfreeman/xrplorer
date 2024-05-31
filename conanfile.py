@@ -17,7 +17,7 @@ class Xrplorer(ConanFile):
 
     requires = [
         # Available at https://conan.jfreeman.dev
-        'cupcake.cmake/1.0.3@github/thejohnfreeman',
+        'cupcake.cmake/1.1.0@github/thejohnfreeman',
     ]
     generators = ['CMakeDeps', 'CMakeToolchain']
 
