@@ -142,7 +142,7 @@
     {
       "name": "xrpl",
       "version": "2.2.0-rc1",
-      "reference": "xrpl/2.2.0-rc1@jfreeman/nodestore",
+      "reference": "xrpl/2.2.0@jfreeman/nodestore",
       "file": null,
       "targets": [
         "xrpl::xrpl"

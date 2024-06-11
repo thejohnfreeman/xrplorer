@@ -73,7 +73,7 @@ SLE make_sle(NodePtr const& object) {
     assert(success);
     serializer.chop(key.bytes);
     auto slice2 = serializer.slice();
-    SerialIter sit{slice2.data(), slice2.size()};
+    SerialIter sit{slice2};
     return SLE{sit, key};
 }
 SLE make_sle(Keylet const& keylet, NodePtr const& object) {
@@ -96,7 +96,7 @@ SLE make_sle(Keylet const& keylet, NodePtr const& object) {
     auto slice2 = serializer.slice();
     // An `STLedgerEntry` cannot be constructed
     // with a `Slice` or a `Serializer`, though. Only a `SerialIter`.
-    SerialIter sit{slice2.data(), slice2.size()};
+    SerialIter sit{slice2};
     return SLE{sit, keylet.key};
 }
 STObject make_txm(NodePtr const& object) {
@@ -108,10 +108,16 @@ STObject make_txm(NodePtr const& object) {
     assert(success);
     serializer.chop(key.bytes);
     auto slice2 = serializer.slice();
-    spdlog::info("txm.bytes: {}", slice2.size());
-    SerialIter sit{slice2};
-    STObject st{sit, sfMetadata};
-    return st;
+    SerialIter sit2{slice2};
+    auto lengthTx = sit2.getVLDataLength();
+    auto sliceTx = sit2.getSlice(lengthTx);
+    SerialIter sitTx{sliceTx};
+    STObject stTx{sitTx, sfTransaction};
+    auto lengthMeta = sit2.getVLDataLength();
+    auto sliceMeta = sit2.getSlice(lengthMeta);
+    SerialIter sitMeta{sliceMeta};
+    STObject stMeta{sitMeta, sfMetadata};
+    return stTx;
 }
 }
 
